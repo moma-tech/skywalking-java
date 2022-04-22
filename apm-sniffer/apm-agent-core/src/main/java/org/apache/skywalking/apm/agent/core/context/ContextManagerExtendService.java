@@ -96,6 +96,35 @@ public class ContextManagerExtendService implements BootService, GRPCChannelList
 
         return context;
     }
+    //TODO ENhence TraceId
+    public AbstractTracerContext createTraceContext(String operationName, String traceIdCus,boolean forceSampling) {
+        AbstractTracerContext context;
+        /*
+         * Don't trace anything if the backend is not available.
+         */
+        if (!Config.Agent.KEEP_TRACING && GRPCChannelStatus.DISCONNECT.equals(status)) {
+            return new IgnoredTracerContext();
+        }
+
+        int suffixIdx = operationName.lastIndexOf(".");
+        if (suffixIdx > -1 && Arrays.stream(ignoreSuffixArray)
+                .anyMatch(a -> a.equals(operationName.substring(suffixIdx)))) {
+            context = new IgnoredTracerContext();
+        } else {
+            SamplingService samplingService = ServiceManager.INSTANCE.findService(SamplingService.class);
+            if (forceSampling || samplingService.trySampling(operationName)) {
+                if(StringUtil.isEmpty(traceIdCus)){
+                    context = new TracingContext(operationName, spanLimitWatcher);
+                }else{
+                    context = new TracingContext(operationName,traceIdCus,spanLimitWatcher);
+                }
+            } else {
+                context = new IgnoredTracerContext();
+            }
+        }
+
+        return context;
+    }
 
     @Override
     public void statusChanged(final GRPCChannelStatus status) {

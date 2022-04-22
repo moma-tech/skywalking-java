@@ -64,6 +64,30 @@ public class ContextManager implements BootService {
         }
         return context;
     }
+    //TODO ENhence TraceId
+    private static AbstractTracerContext getOrCreate(String operationName, String traceIdCus,boolean forceSampling) {
+        AbstractTracerContext context = CONTEXT.get();
+        if (context == null) {
+            if (StringUtil.isEmpty(operationName)) {
+                if (LOGGER.isDebugEnable()) {
+                    LOGGER.debug("No operation name, ignore this trace.");
+                }
+                context = new IgnoredTracerContext();
+            } else {
+                if (EXTEND_SERVICE == null) {
+                    EXTEND_SERVICE = ServiceManager.INSTANCE.findService(ContextManagerExtendService.class);
+                }
+                if(StringUtil.isEmpty(traceIdCus)){
+                    context = EXTEND_SERVICE.createTraceContext(operationName, forceSampling);
+                }else{
+                    context = EXTEND_SERVICE.createTraceContext(operationName, traceIdCus,forceSampling);
+                }
+
+            }
+            CONTEXT.set(context);
+        }
+        return context;
+    }
 
     private static AbstractTracerContext get() {
         return CONTEXT.get();
@@ -105,6 +129,31 @@ public class ContextManager implements BootService {
             context.extract(carrier);
         } else {
             context = getOrCreate(operationName, false);
+            span = context.createEntrySpan(operationName);
+        }
+        return span;
+    }
+    //TODO ENhence TraceId
+    public static AbstractSpan createEntrySpan(String operationName, String traceIdCus,ContextCarrier carrier) {
+        AbstractSpan span;
+        AbstractTracerContext context;
+        operationName = StringUtil.cut(operationName, OPERATION_NAME_THRESHOLD);
+        if (carrier != null && carrier.isValid()) {
+            SamplingService samplingService = ServiceManager.INSTANCE.findService(SamplingService.class);
+            samplingService.forceSampled();
+            if(StringUtil.isEmpty(traceIdCus)){
+                context = getOrCreate(operationName, true);
+            }else{
+                context = getOrCreate(operationName, traceIdCus,true);
+            }
+            span = context.createEntrySpan(operationName);
+            context.extract(carrier);
+        } else {
+            if(StringUtil.isEmpty(traceIdCus)){
+                context = getOrCreate(operationName, false);
+            }else{
+                context = getOrCreate(operationName, traceIdCus,false);
+            }
             span = context.createEntrySpan(operationName);
         }
         return span;

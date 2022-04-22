@@ -136,6 +136,29 @@ public class TracingContext implements AbstractTracerContext {
         this.extensionContext = new ExtensionContext();
         this.spanLimitWatcher = spanLimitWatcher;
     }
+    //TODO ENhence TraceId
+    TracingContext(String firstOPName, String traceIdCus, SpanLimitWatcher spanLimitWatcher) {
+        if(StringUtil.isEmpty(traceIdCus)){
+            this.segment = new TraceSegment();
+        }else{
+            this.segment = new TraceSegment(traceIdCus);
+        }
+        this.spanIdGenerator = 0;
+        isRunningInAsyncMode = false;
+        createTime = System.currentTimeMillis();
+        running = true;
+
+        // profiling status
+        if (PROFILE_TASK_EXECUTION_SERVICE == null) {
+            PROFILE_TASK_EXECUTION_SERVICE = ServiceManager.INSTANCE.findService(ProfileTaskExecutionService.class);
+        }
+        this.profileStatus = PROFILE_TASK_EXECUTION_SERVICE.addProfiling(
+                this, segment.getTraceSegmentId(), firstOPName);
+
+        this.correlationContext = new CorrelationContext();
+        this.extensionContext = new ExtensionContext();
+        this.spanLimitWatcher = spanLimitWatcher;
+    }
 
     /**
      * Inject the context into the given carrier, only when the active span is an exit one.

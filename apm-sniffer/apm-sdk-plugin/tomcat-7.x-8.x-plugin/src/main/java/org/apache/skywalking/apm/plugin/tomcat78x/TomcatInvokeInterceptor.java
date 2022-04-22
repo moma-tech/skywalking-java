@@ -40,6 +40,7 @@ import org.apache.skywalking.apm.agent.core.util.MethodUtil;
 import org.apache.skywalking.apm.network.trace.component.ComponentsDefine;
 import org.apache.skywalking.apm.util.StringUtil;
 import org.apache.tomcat.util.http.Parameters;
+import org.slf4j.MDC;
 
 /**
  * {@link TomcatInvokeInterceptor} fetch the serialized context data by using {@link
@@ -67,6 +68,10 @@ public class TomcatInvokeInterceptor implements InstanceMethodsAroundInterceptor
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
                              MethodInterceptResult result) throws Throwable {
         Request request = (Request) allArguments[0];
+        //TODO Tomcat Request
+        String header = (String)request.getHeader("traceid");
+        //MDC.put("TraceId",header);
+        header="";
         ContextCarrier contextCarrier = new ContextCarrier();
 
         CarrierItem next = contextCarrier.items();
@@ -75,7 +80,7 @@ public class TomcatInvokeInterceptor implements InstanceMethodsAroundInterceptor
             next.setHeadValue(request.getHeader(next.getHeadKey()));
         }
         String operationName =  String.join(":", request.getMethod(), request.getRequestURI());
-        AbstractSpan span = ContextManager.createEntrySpan(operationName, contextCarrier);
+        AbstractSpan span = ContextManager.createEntrySpan(operationName, header, contextCarrier);
         Tags.URL.set(span, request.getRequestURL().toString());
         Tags.HTTP.METHOD.set(span, request.getMethod());
         span.setComponent(ComponentsDefine.TOMCAT);

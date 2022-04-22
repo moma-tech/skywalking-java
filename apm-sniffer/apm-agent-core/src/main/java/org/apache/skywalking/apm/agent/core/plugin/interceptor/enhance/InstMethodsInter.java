@@ -19,6 +19,7 @@
 package org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance;
 
 import java.lang.reflect.Method;
+import java.util.Locale;
 import java.util.concurrent.Callable;
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Origin;
@@ -29,6 +30,8 @@ import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
 import org.apache.skywalking.apm.agent.core.plugin.PluginException;
 import org.apache.skywalking.apm.agent.core.plugin.loader.InterceptorInstanceLoader;
 import org.apache.skywalking.apm.agent.core.logging.api.ILog;
+import org.apache.skywalking.apm.util.StringUtil;
+import org.slf4j.MDC;
 
 /**
  * The actual byte-buddy's interceptor to intercept class instance methods. In this class, it provides a bridge between
@@ -73,6 +76,18 @@ public class InstMethodsInter {
 
         MethodInterceptResult result = new MethodInterceptResult();
         try {
+            //TODO check if httprequest, get params,set MDC
+            for (Object object:allArguments) {
+                System.out.println(object.getClass().getName());
+                if(object.getClass().getName().toLowerCase().contains("org.apache.catalina.connector.request")){
+                    //Object cRequest = object.getClass().getDeclaredField("coyoteRequest").;
+                    String header = (String)(object.getClass().getMethod("getHeader",String.class).invoke(object,"traceid"));
+                    if(StringUtil.isNotEmpty(header)){
+                        MDC.put("TraceId",header);
+                        break;
+                    }
+                }
+            }
             interceptor.beforeMethod(targetObject, method, allArguments, method.getParameterTypes(), result);
         } catch (Throwable t) {
             LOGGER.error(t, "class[{}] before method[{}] intercept failure", obj.getClass(), method.getName());

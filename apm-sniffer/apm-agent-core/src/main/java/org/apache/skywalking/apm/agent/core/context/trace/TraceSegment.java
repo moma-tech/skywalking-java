@@ -25,6 +25,8 @@ import org.apache.skywalking.apm.agent.core.context.ids.DistributedTraceId;
 import org.apache.skywalking.apm.agent.core.context.ids.GlobalIdGenerator;
 import org.apache.skywalking.apm.agent.core.context.ids.NewDistributedTraceId;
 import org.apache.skywalking.apm.network.language.agent.v3.SegmentObject;
+import org.apache.skywalking.apm.util.StringUtil;
+import org.slf4j.MDC;
 
 /**
  * {@link TraceSegment} is a segment or fragment of the distributed trace. See https://github.com/opentracing/specification/blob/master/specification.md#the-opentracing-data-model
@@ -71,9 +73,23 @@ public class TraceSegment {
     public TraceSegment() {
         this.traceSegmentId = GlobalIdGenerator.generate();
         this.spans = new LinkedList<>();
-        this.relatedGlobalTraceId = new NewDistributedTraceId();
+        // @TODO ivan
+        NewDistributedTraceId traceId = StringUtil.isEmpty(MDC.get("TraceId")) ? new NewDistributedTraceId() : new NewDistributedTraceId(MDC.get("TraceId"));
+        //this.relatedGlobalTraceId = new NewDistributedTraceId();
+        this.relatedGlobalTraceId=traceId;
         this.createTime = System.currentTimeMillis();
     }
+    //TODO ENHENCE TraceId
+    public TraceSegment(String traceIdCus) {
+        this.traceSegmentId = GlobalIdGenerator.generate();
+        this.spans = new LinkedList<>();
+        // @TODO ivan
+        NewDistributedTraceId traceId = StringUtil.isEmpty(traceIdCus) ? new NewDistributedTraceId() : new NewDistributedTraceId(traceIdCus);
+        //this.relatedGlobalTraceId = new NewDistributedTraceId();
+        this.relatedGlobalTraceId=traceId;
+        this.createTime = System.currentTimeMillis();
+    }
+
 
     /**
      * Establish the link between this segment and its parents.

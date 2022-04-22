@@ -25,4 +25,8 @@ public class NewDistributedTraceId extends DistributedTraceId {
     public NewDistributedTraceId() {
         super(GlobalIdGenerator.generate());
     }
+
+    public NewDistributedTraceId(String traceId) {
+        super(traceId);
+    }
 }
